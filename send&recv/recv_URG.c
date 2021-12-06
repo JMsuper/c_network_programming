@@ -8,11 +8,11 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#define BUF_SIZE 100
+#define BUF_SIZE 30
 
 void error_handling(char *message);
 void urg_handler(int signo);
-int accpt_sock,recv_sock;
+int accept_sock,recv_sock;
 
 int main(int argc, char *argv[])
 {
@@ -34,8 +34,8 @@ int main(int argc, char *argv[])
 	sigemptyset(&act.sa_mask);
 	act.sa_flags = 0;
 	
-	accpt_sock = socket(PF_INET,SOCK_STREAM,0);
-	if(accpt_sock==-1)
+	accept_sock = socket(PF_INET,SOCK_STREAM,0);
+	if(accept_sock==-1)
 		error_handling("socket() error");
 		
 	memset(&serv_adr, 0, sizeof(serv_adr));
@@ -43,19 +43,19 @@ int main(int argc, char *argv[])
 	serv_adr.sin_addr.s_addr=htonl(INADDR_ANY);
 	serv_adr.sin_port=htons(atoi(argv[1]));
 	
-	if(bind(accpt_sock,(struct sockaddr*)&serv_adr,sizeof(serv_adr)) == -1)
+	if(bind(accept_sock,(struct sockaddr*)&serv_adr,sizeof(serv_adr)) == -1)
 		error_handling("bind() error");
-	if(listen(accpt_sock,5) == -1)
+	if(listen(accept_sock,5) == -1)
 		error_handling("listen() error");
 	
-	recv_sock = accept(accpt_sock, (struct sockaddr*)&clnt_adr, &adr_sz);	
+	recv_sock = accept(accept_sock, (struct sockaddr*)&clnt_adr, &adr_sz);	
 	
 	// fcntl : controls the properties of an already open file
 	// F_SETOWN :  command that set process receiving SIGIO, SIGURG
 	fcntl(recv_sock,F_SETOWN,getpid());
 	sigaction(SIGURG, &act, 0);
 
-	while((str_len=recv(clnt_sock, buf, sizeof(buf)-1,0))!= 0)
+	while((str_len=recv(recv_sock, buf, sizeof(buf),0))!= 0)
 	{
 		if(str_len==-1){
 			fprintf(stderr,"Recv Error: %s\n", strerror(errno));
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 		buf[str_len]=0;
 		printf("%s\n",buf);
 	}
-	close(accept_sock)
+	close(accept_sock);
 	close(recv_sock);
 	return 0;
 }
@@ -78,7 +78,6 @@ void urg_handler(int signo)
 	str_len = recv(recv_sock,buf,sizeof(buf)-1,MSG_OOB);
 	buf[str_len]=0;
 	printf("Urgent message: %s \n", buf);
-	return;
 }
 
 void error_handling(char *message)
